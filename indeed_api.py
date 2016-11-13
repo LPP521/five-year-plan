@@ -8,7 +8,10 @@ from env_variables import INDEED_PUBLISHER_ID, TWITTER_CONSUMER_KEY, \
     TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
 
 
-REQUEST_URL = 'http://api.indeed.com/ads/apisearch?publisher={publisher_id}&q={search_term}&l=&sort=&radius=&jt=&start=&limit=30&fromage=&filter=&latlong=%co=&chnl=&userip=&v=2'
+AUTH = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
+AUTH.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
+
+INDEED_REQUEST_URL = 'http://api.indeed.com/ads/apisearch?publisher={publisher_id}&q={search_term}&l=&sort=&radius=&jt=&start=&limit=30&fromage=&filter=&latlong=%co=&chnl=&userip=&v=2'
 
 StartingPhrase = namedtuple('StartingPhrase', 'phrase, replace_with')
 
@@ -61,7 +64,7 @@ class FiveYearPlanText(markovify.Text):
 
 
 def indeed_api_request(search_term):
-    url = REQUEST_URL.format(
+    url = INDEED_REQUEST_URL.format(
         publisher_id=INDEED_PUBLISHER_ID,
         search_term=search_term
     )
