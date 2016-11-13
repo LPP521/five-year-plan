@@ -1,26 +1,37 @@
+from bs4 import BeautifulSoup
 from collections import namedtuple
 import markovify
 import random
 import requests
-from bs4 import BeautifulSoup
+import tweepy
+import yaml
 
-from env_variables import INDEED_PUBLISHER_ID, TWITTER_CONSUMER_KEY, \
-    TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+# Get credentials from a yaml file
+creds = yaml.load(open('credentials.yml'))
+INDEED_PUBLISHER_ID = creds['indeed']['publisher_id'] 
+TWITTER_CONSUMER_KEY = creds['twitter']['consumer_key']
+TWITTER_CONSUMER_SECRET = creds['twitter']['consumer_secret'] 
+TWITTER_ACCESS_TOKEN = creds['twitter']['access_token'] 
+TWITTER_ACCESS_TOKEN_SECRET = creds['twitter']['access_token_secret'] 
 
 
+# Set up access to the twitter account using tweepy
 AUTH = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
 AUTH.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
+TWITTER_API = tweepy.API(AUTH)
+
 
 INDEED_REQUEST_URL = 'http://api.indeed.com/ads/apisearch?publisher={publisher_id}&q={search_term}&l=&sort=&radius=&jt=&start=&limit=30&fromage=&filter=&latlong=%co=&chnl=&userip=&v=2'
 
-StartingPhrase = namedtuple('StartingPhrase', 'phrase, replace_with')
 
+StartingPhrase = namedtuple('StartingPhrase', 'phrase, replace_with')
 STARTING_PHRASES = (
     StartingPhrase('experience', 'To have experience'),
     StartingPhrase('you will', 'To'),
     StartingPhrase('has a', 'To have a'),
     StartingPhrase('will be', 'To be'),
 )
+
 
 SEARCH_TERMS = (
     'python',
@@ -134,22 +145,25 @@ def make_plan_from_corpus(text_model, number_of_plans=1):
         while not_a_good_word:
             try:
                 sentence = text_model.make_short_sentence_with_start(starting_phrase.phrase, 140)
+                plan = sentence.replace(starting_phrase.phrase, starting_phrase.replace_with)
+                plans.append(plan)
                 not_a_good_word = False
             except KeyError:
                 starting_phrase = random.choice(STARTING_PHRASES)
 
-        plan =  sentence.replace(starting_phrase.phrase, starting_phrase.replace_with)
-        plans.append(plan)
     return plans
    
 
 def get_a_good_plan():
     plans = make_plans()
     good_plans = []
-    # Exclude the ones that have the word "our" or "your"
+    # Exclude the ones that have the word "our" or "your" or "we"
     for plan in plans:
-        if 'our' not in plan and 'your' not in plan:
+        if 'our' not in plan or 'your' not in plan or 'we' not in plan:
             good_plans.append(plan)
     return random.choice(good_plans)
 
 
+def tweet_a_five_year_plan():
+    plan = get_a_good_plan()
+    TWITTER_API.update_status(plan)

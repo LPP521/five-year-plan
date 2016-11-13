@@ -1,4 +1,3 @@
 *.pyc
 *.swp
-
-env_variables.py
+*.yml
