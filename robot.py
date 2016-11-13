@@ -26,6 +26,7 @@ INDEED_REQUEST_URL = 'http://api.indeed.com/ads/apisearch?publisher={publisher_i
 
 StartingPhrase = namedtuple('StartingPhrase', 'phrase, replace_with')
 STARTING_PHRASES = (
+    StartingPhrase('Experience', 'To have experience'),
     StartingPhrase('experience', 'To have experience'),
     StartingPhrase('you will', 'To'),
     StartingPhrase('has a', 'To have a'),
@@ -53,6 +54,8 @@ SEARCH_TERMS = (
 )
 
 
+# Subclass the markovify Text class so I can call make_short_sentence with an init_state from
+# make_sentence_with_start code
 class FiveYearPlanText(markovify.Text):
     
     def make_short_sentence_with_start(self, beginning, char_limit, **kwargs):
@@ -69,7 +72,7 @@ class FiveYearPlanText(markovify.Text):
             init_state = tuple([ markovify.chain.BEGIN ] * (self.state_size - word_count) + split)
         else:
             err_msg = "`make_sentence_with_start` for this model requires a string containing 1 to {0} words. Yours has {1}: {2}".format(self.state_size, word_count, str(split))
-            raise ParamError(err_msg)
+            raise markovify.text.ParamError(err_msg)
 
         return self.make_short_sentence(char_limit, init_state=init_state, **kwargs)
 
@@ -90,6 +93,7 @@ def make_soup(response):
     return soup
 
 
+# This is unused right now, I thought the whole descriptions would be better even though it takes longer
 def get_snippets(soup):
     snippets = [snippet.contents[0] for snippet in soup.find_all('snippet')]
     snippet_string = (' ').join(snippets)
@@ -114,8 +118,6 @@ def collect_descriptions(search_terms):
     for search_term in search_terms:
         response = indeed_api_request(search_term)
         soup = make_soup(response)
-        # snippets = get_snippets(soup)
-        # list_of_descriptions.append(snippets)
         descriptions = get_job_descriptions(soup)
         list_of_descriptions.append(descriptions)
     
@@ -125,8 +127,9 @@ def collect_descriptions(search_terms):
 def retrieve_corpus(search_terms=('python', 'ruby', 'software')):
     list_of_descriptions = collect_descriptions(search_terms)
     corpus = ' '.join(list_of_descriptions)
-    corpus = corpus.replace('\n','')
-    corpus = corpus.replace('\u2019', '\'')
+    corpus = corpus.replace('\n',' ')
+    # Blargh unicode characters
+    corpus = corpus.encode('utf8')
     return corpus
 
 
@@ -134,16 +137,18 @@ def make_plans(number_of_plans=10):
     search_terms = random.sample(SEARCH_TERMS, 3)
     corpus = retrieve_corpus(search_terms)
     text_model = FiveYearPlanText(corpus)
-    return make_plan_from_corpus(text_model, number_of_plans=number_of_plans)
+    return generate_plans_from_text_model(text_model, number_of_plans=number_of_plans)
 
 
-def make_plan_from_corpus(text_model, number_of_plans=1):
+def generate_plans_from_text_model(text_model, number_of_plans=10):
     plans = []
     for i in range(0, number_of_plans):
         starting_phrase = random.choice(STARTING_PHRASES)
         not_a_good_word = True
         while not_a_good_word:
             try:
+                # If the starting phrase is not in the corpus as an initial state, there will
+                # be a key error on this line
                 sentence = text_model.make_short_sentence_with_start(starting_phrase.phrase, 140)
                 plan = sentence.replace(starting_phrase.phrase, starting_phrase.replace_with)
                 plans.append(plan)
@@ -156,11 +161,12 @@ def make_plan_from_corpus(text_model, number_of_plans=1):
 
 def get_a_good_plan():
     plans = make_plans()
-    good_plans = []
-    # Exclude the ones that have the word "our" or "your" or "we"
-    for plan in plans:
-        if 'our' not in plan or 'your' not in plan or 'we' not in plan:
-            good_plans.append(plan)
+    banned_plan_words = ('our', 'your', 'we', 'you', 'they')
+    good_plans = [
+        plan for plan in plans 
+        if not any(word in plan for word in banned_plan_words)
+    ]
+
     return random.choice(good_plans)
 
 
