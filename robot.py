@@ -56,6 +56,7 @@ SEARCH_TERMS = (
     'HTML',
     'CSS',
     'elixir',
+    'devops',
 )
 
 
