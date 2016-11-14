@@ -6,8 +6,13 @@ import requests
 import tweepy
 import yaml
 
+# Where is this file being run from?
+path_with_filename = __file__
+path = '/'.join(path_with_filename.split('/')[0:-1])
+if path != '':
+    path = path + '/'
 # Get credentials from a yaml file
-creds = yaml.load(open('credentials.yml'))
+creds = yaml.load(open('{}credentials.yml'.format(path)))
 INDEED_PUBLISHER_ID = creds['indeed']['publisher_id'] 
 TWITTER_CONSUMER_KEY = creds['twitter']['consumer_key']
 TWITTER_CONSUMER_SECRET = creds['twitter']['consumer_secret'] 
