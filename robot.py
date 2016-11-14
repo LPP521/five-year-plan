@@ -173,3 +173,8 @@ def get_a_good_plan():
 def tweet_a_five_year_plan():
     plan = get_a_good_plan()
     TWITTER_API.update_status(plan)
+
+
+# This is for the ability to run robot.py as a scheduled job in order to tweet
+if __name__ == '__main__':
+    tweet_a_five_year_plan()
