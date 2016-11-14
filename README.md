@@ -33,3 +33,8 @@ If you want the bot to tweet five-year plans for you once a day at noon, you can
 # m h  dom mon dow   command
 0 12 * * * /path/to/virtualenv/bin/python /path/to/five-year-plan/robot.py
 ```
+
+## See it in action
+
+On twitter, you can see this bot in action: [five_year_plans](https://twitter.com/five_year_plans)
+Right now, it tweets every 6 hours.
