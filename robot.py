@@ -13,11 +13,11 @@ if path != '':
     path = path + '/'
 # Get credentials from a yaml file
 creds = yaml.load(open('{}credentials.yml'.format(path)))
-INDEED_PUBLISHER_ID = creds['indeed']['publisher_id'] 
+INDEED_PUBLISHER_ID = creds['indeed']['publisher_id']
 TWITTER_CONSUMER_KEY = creds['twitter']['consumer_key']
-TWITTER_CONSUMER_SECRET = creds['twitter']['consumer_secret'] 
-TWITTER_ACCESS_TOKEN = creds['twitter']['access_token'] 
-TWITTER_ACCESS_TOKEN_SECRET = creds['twitter']['access_token_secret'] 
+TWITTER_CONSUMER_SECRET = creds['twitter']['consumer_secret']
+TWITTER_ACCESS_TOKEN = creds['twitter']['access_token']
+TWITTER_ACCESS_TOKEN_SECRET = creds['twitter']['access_token_secret']
 
 
 # Set up access to the twitter account using tweepy
@@ -26,7 +26,12 @@ AUTH.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
 TWITTER_API = tweepy.API(AUTH)
 
 
-INDEED_REQUEST_URL = 'http://api.indeed.com/ads/apisearch?publisher={publisher_id}&q={search_term}&l=&sort=&radius=&jt=&start=&limit=30&fromage=&filter=&latlong=%co=&chnl=&userip=&v=2'
+INDEED_REQUEST_URL = '''
+http://api.indeed.com/ads/apisearch?
+publisher={publisher_id}
+&q={search_term}
+&l=&sort=&radius=&jt=&start=&limit=30&fromage=&filter=&latlong=%co=&chnl=&userip=&v=2
+'''
 
 
 StartingPhrase = namedtuple('StartingPhrase', 'phrase, replace_with')
@@ -63,11 +68,10 @@ SEARCH_TERMS = (
 # Subclass the markovify Text class so I can call make_short_sentence with an init_state from
 # make_sentence_with_start code
 class FiveYearPlanText(markovify.Text):
-    
     def make_short_sentence_with_start(self, beginning, char_limit, **kwargs):
         """
         Tries making a sentence that begins with `beginning` string,
-        which should be a string of one or two words known to exist in the 
+        which should be a string of one or two words known to exist in the
         corpus. **kwargs are passed to `self.make_sentence`.
         """
         split = self.word_split(beginning)
@@ -75,9 +79,11 @@ class FiveYearPlanText(markovify.Text):
         if word_count == self.state_size:
             init_state = tuple(split)
         elif word_count > 0 and word_count < self.state_size:
-            init_state = tuple([ markovify.chain.BEGIN ] * (self.state_size - word_count) + split)
+            init_state = tuple([markovify.chain.BEGIN] * (self.state_size - word_count) + split)
         else:
-            err_msg = "`make_sentence_with_start` for this model requires a string containing 1 to {0} words. Yours has {1}: {2}".format(self.state_size, word_count, str(split))
+            err_msg = '''
+            `make_sentence_with_start` for this model requires a string containing 1 to {0} words. Yours has {1}: {2}
+            '''.format(self.state_size, word_count, str(split))
             raise markovify.text.ParamError(err_msg)
 
         return self.make_short_sentence(char_limit, init_state=init_state, **kwargs)
@@ -91,7 +97,7 @@ def indeed_api_request(search_term):
 
     response = requests.get(url)
     return response
-    
+
 
 def make_soup(response):
     xml_document = response.content
@@ -103,7 +109,7 @@ def make_soup(response):
 def get_snippets(soup):
     snippets = [snippet.contents[0] for snippet in soup.find_all('snippet')]
     snippet_string = (' ').join(snippets)
-    return snippet_string 
+    return snippet_string
 
 
 def get_job_descriptions(soup):
@@ -116,7 +122,7 @@ def get_job_descriptions(soup):
         descriptions = descriptions + ' '.join(job_description_list)
 
     return descriptions
- 
+
 
 def collect_descriptions(search_terms):
     list_of_descriptions = []
@@ -126,14 +132,14 @@ def collect_descriptions(search_terms):
         soup = make_soup(response)
         descriptions = get_job_descriptions(soup)
         list_of_descriptions.append(descriptions)
-    
+
     return list_of_descriptions
 
 
 def retrieve_corpus(search_terms=('python', 'ruby', 'software')):
     list_of_descriptions = collect_descriptions(search_terms)
     corpus = ' '.join(list_of_descriptions)
-    corpus = corpus.replace('\n',' ')
+    corpus = corpus.replace('\n', ' ')
     # Blargh unicode characters
     corpus = corpus.encode('utf8')
     return corpus
@@ -163,17 +169,17 @@ def generate_plans_from_text_model(text_model, number_of_plans=10):
                 starting_phrase = random.choice(STARTING_PHRASES)
 
     return plans
-   
+
 
 def get_a_good_plan():
     plans = make_plans()
     banned_plan_words = ('our', 'your', 'we', 'you', 'they')
     good_plans = [
-        plan for plan in plans 
+        plan for plan in plans
         if not any(word in plan for word in banned_plan_words)
     ]
 
-    return random.choice(good_plans)
+    return random.choice(good_plans) if good_plans else ''
 
 
 def tweet_a_five_year_plan():
